@@ -172,12 +172,13 @@ def render_clip(video, candidate, idx, face_x, face_y, face_w, face_h, title):
     make_ass([], start, end, title, ass)  # replaced below with full transcript events by caller
     out = OUT / f"clipforge_{idx:02d}.mp4"
     # Top facecam is 36%; gameplay is 64%. Both are fitted to a 1080px canvas.
+    escaped_ass = str(ass).replace(":", r"\:")
     filter_complex = (
         f"[0:v]split=2[facein][gamein];"
         f"[facein]crop={fw}:{fh}:{fx}:{fy},scale=1080:690:force_original_aspect_ratio=increase,"
         f"crop=1080:690[face];"
         f"[gamein]scale=1080:1230:force_original_aspect_ratio=increase,crop=1080:1230[game];"
-        f"[face][game]vstack=inputs=2,subtitles='{str(ass).replace(':', r'\\:')}'[v]"
+        f"[face][game]vstack=inputs=2,subtitles='{escaped_ass}'[v]"
     )
     cmd = ["ffmpeg", "-y", "-ss", str(start), "-i", str(video), "-t", str(clip_dur),
            "-filter_complex", filter_complex, "-map", "[v]", "-map", "0:a?",

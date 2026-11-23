@@ -217,7 +217,13 @@ def save_upload(upload):
 
 with st.sidebar:
     st.header("Clip settings")
-    st.write("Your reference layout: streamer above, gameplay below.")
+
+    content_type = st.selectbox(
+        "Content type",
+        ["Gaming", "Podcast", "Reaction", "Talking Head", "Documentary"]
+    )
+
+    st.write("Choose how your clips should look.")
     face_x = st.slider("Facecam left position (%)", 0, 90, 0) / 100
     face_y = st.slider("Facecam top position (%)", 0, 90, 0) / 100
     face_w = st.slider("Facecam width (%)", 10, 100, 35) / 100

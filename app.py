@@ -327,10 +327,10 @@ if start_btn:
             results = []
             for i, c in enumerate(candidates[:n_clips], 1):
                 title = clean_title(c["text"])
-       path = render_with_captions(
-    source, c, i, face_x, face_y, face_w, face_h,
-    title, transcript, content_type, layout_mode
-)         
+                path = render_with_captions(
+                    source, c, i, face_x, face_y, face_w, face_h,
+                    title, transcript, content_type, layout_mode
+                )         
                 results.append((c, title, path))
                 st.write(f"Rendered clip {i}/{min(n_clips, len(candidates))}")
             status.update(label="Your clips are ready", state="complete")

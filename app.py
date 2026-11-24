@@ -222,7 +222,16 @@ with st.sidebar:
         "Content type",
         ["Gaming", "Podcast", "Reaction", "Talking Head", "Documentary"]
     )
-
+    layout_mode = st.selectbox(
+        "Video layout",
+        [
+            "Automatic (recommended)",
+            "Full-screen",
+            "Stacked",
+            "Picture-in-picture",
+            "Side-by-side"
+        ]
+    )
     st.write("Choose how your clips should look.")
     face_x = st.slider("Facecam left position (%)", 0, 90, 0) / 100
     face_y = st.slider("Facecam top position (%)", 0, 90, 0) / 100

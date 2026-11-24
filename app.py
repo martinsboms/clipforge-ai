@@ -187,28 +187,80 @@ def render_clip(video, candidate, idx, face_x, face_y, face_w, face_h, title):
     run(cmd)
     return out
 
-def render_with_captions(video, candidate, idx, face_x, face_y, face_w, face_h, title, transcript):
+
+def render_with_captions(video, candidate, idx, face_x, face_y, face_w, face_h,
+                         title, transcript, content_type, layout_mode):
     dur, width, height = probe(video)
     start, end = candidate["start"], candidate["end"]
-    fx, fy = int(width*face_x), int(height*face_y)
-    fw, fh = max(2, int(width*face_w)), max(2, int(height*face_h))
-    fx = max(0, min(fx, width-fw)); fy = max(0, min(fy, height-fh))
+
+    fx, fy = int(width * face_x), int(height * face_y)
+    fw, fh = max(2, int(width * face_w)), max(2, int(height * face_h))
+    fx = max(0, min(fx, width - fw))
+    fy = max(0, min(fy, height - fh))
+
     ass = WORK / f"clip_{idx}.ass"
     make_ass(transcript, start, end, title, ass)
     out = OUT / f"clipforge_{idx:02d}.mp4"
     ass_path = str(ass).replace("\\", "/").replace(":", r"\:")
-    fc = (
-        f"[0:v]split=2[facein][gamein];"
-        f"[facein]crop={fw}:{fh}:{fx}:{fy},scale=1080:690:force_original_aspect_ratio=increase,"
-        f"crop=1080:690[face];"
-        f"[gamein]scale=1080:1230:force_original_aspect_ratio=increase,crop=1080:1230[game];"
-        f"[face][game]vstack=inputs=2,subtitles='{ass_path}'[v]"
-    )
-    run(["ffmpeg", "-y", "-ss", str(start), "-i", str(video), "-t", str(end-start),
+
+    if layout_mode == "Automatic (recommended)":
+        effective_layout = "Stacked" if content_type == "Gaming" else "Full-screen"
+    else:
+        effective_layout = layout_mode
+
+    if effective_layout == "Full-screen":
+        fc = (
+            f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
+            f"crop=1080:1920,subtitles='{ass_path}'[v]"
+        )
+
+    elif effective_layout == "Stacked":
+        fc = (
+            f"[0:v]split=2[facein][mainin];"
+            f"[facein]crop={fw}:{fh}:{fx}:{fy},"
+            f"scale=1080:576:force_original_aspect_ratio=increase,"
+            f"crop=1080:576[face];"
+            f"[mainin]scale=1080:1344:force_original_aspect_ratio=increase,"
+            f"crop=1080:1344[main];"
+            f"[face][main]vstack=inputs=2,"
+            f"subtitles='{ass_path}'[v]"
+        )
+
+    elif effective_layout == "Picture-in-picture":
+        fc = (
+            f"[0:v]split=2[mainin][facein];"
+            f"[mainin]scale=1080:1920:force_original_aspect_ratio=increase,"
+            f"crop=1080:1920[main];"
+            f"[facein]crop={fw}:{fh}:{fx}:{fy},"
+            f"scale=360:576[face];"
+            f"[main][face]overlay=main_w-overlay_w-40:40,"
+            f"subtitles='{ass_path}'[v]"
+        )
+
+    elif effective_layout == "Side-by-side":
+        fc = (
+            f"[0:v]split=2[facein][mainin];"
+            f"[facein]crop={fw}:{fh}:{fx}:{fy},"
+            f"scale=540:1920:force_original_aspect_ratio=increase,"
+            f"crop=540:1920[face];"
+            f"[mainin]scale=540:1920:force_original_aspect_ratio=increase,"
+            f"crop=540:1920[main];"
+            f"[face][main]hstack=inputs=2,"
+            f"subtitles='{ass_path}'[v]"
+        )
+
+    else:
+        raise ValueError(f"Unsupported video layout: {effective_layout}")
+
+    run(["ffmpeg", "-y", "-ss", str(start), "-i", str(video),
+         "-t", str(end-start),
          "-filter_complex", fc, "-map", "[v]", "-map", "0:a?",
          "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
-         "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(out)])
+         "-c:a", "aac", "-b:a", "128k",
+         "-movflags", "+faststart", str(out)])
+
     return out
+
 
 def save_upload(upload):
     path = WORK / upload.name
@@ -275,8 +327,10 @@ if start_btn:
             results = []
             for i, c in enumerate(candidates[:n_clips], 1):
                 title = clean_title(c["text"])
-                path = render_with_captions(source, c, i, face_x, face_y, face_w, face_h,
-                                            title, transcript)
+       path = render_with_captions(
+    source, c, i, face_x, face_y, face_w, face_h,
+    title, transcript, content_type, layout_mode
+)         
                 results.append((c, title, path))
                 st.write(f"Rendered clip {i}/{min(n_clips, len(candidates))}")
             status.update(label="Your clips are ready", state="complete")
